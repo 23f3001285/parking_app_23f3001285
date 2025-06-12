@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h2>Book a Parking Slot</h2>
+<form method="POST" action="{{ url_for('book_slot') }}">
+    <label>Select Lot:</label>
+    <select name="lot_id" id="lot" required>
+        {% for lot in lots %}
+           <option value="{{ lot.id }}" data-price="{{ lot.price_per_hour }}">{{ lot.location_name }}</option>
+        {% endfor %}
+    </select>
+    <label>Select Spot:</label>
+    <select name="spot_id" id="spot" required>
+        {% for spot in spots %}
+           <option value="{{ spot.id }}" data-lot="{{ spot.lot_id }}">
+               {% if spot.status == 'O' %}
+                   <span style="color: red;">Occupied</span>
+               {% else %}
+                   <span style="color: green;">Available</span>
+               {% endif %}
+              Lot: {{ spot.lot.location_name }} | Spot #: {{ spot.spot_number }}
+           </option>
+        {% endfor %}
+    </select>
+
+    <label>Start Time:</label>
+    <input type="text" name="start_time" placeholder="e.g. 10:00 AM" required><br><br>
+
+    <label>End Time:</label>
+    <input type="text" name="end_time" placeholder="e.g. 12:00 PM" required><br><br>
+    
+    <p><strong>Estimated Cost: ₹<span id="cost">0.00</span></strong></p>
+
+    <button type="submit">Book Slot</button>
+</form>
+
+<script>
+function filterSpots() {
+    const selectedLot = document.getElementById('lot').value;
+    const allSpots = document.querySelectorAll('#spot option');
+
+    allSpots.forEach(opt => {
+        if (!opt.value) return;  // Skip the default
+        opt.style.display = opt.dataset.lot === selectedLot ? 'block' : 'none';
+    });
+
+    document.getElementById('spot').value = ""; // reset spot
+    calculateCost();  // Reset cost
+}
+
+function parseTime(timeStr) {
+    const [time, modifier] = timeStr.trim().split(' ');
+    if (!time || !modifier) return null;
+
+    let [hours, minutes] = time.split(':').map(Number);
+    if (modifier === 'PM' && hours !== 12) hours += 12;
+    if (modifier === 'AM' && hours === 12) hours = 0;
+
+    return new Date(0, 0, 0, hours, minutes);
+}
+
+function calculateCost() {
+    const start = parseTime(document.getElementById('start_time').value);
+    const end = parseTime(document.getElementById('end_time').value);
+    const selectedLot = document.getElementById('lot');
+    const price = parseFloat(selectedLot.options[selectedLot.selectedIndex]?.dataset.price || 0);
+
+    if (!start || !end || end <= start) {
+        document.getElementById('cost').textContent = "0.00";
+        return;
+    }
+
+    const durationHours = (end - start) / (1000 * 60 * 60);
+    const total = (durationHours * price).toFixed(2);
+    document.getElementById('cost').textContent = total;
+}
+
+function validateBooking() {
+    const start = document.getElementById('start_time').value;
+    const end = document.getElementById('end_time').value;
+    if (!start || !end) {
+        alert("Please fill in start and end times.");
+        return false;
+    }
+    return true;
+}
+
+document.getElementById('start_time').addEventListener('input', calculateCost);
+document.getElementById('end_time').addEventListener('input', calculateCost);
+</script>
+
+{% endblock %}
+

@@ -1,2 +1,15 @@
-<h2>Welcome, {{ current_user.id }}</h2>
+{% extends 'base.html' %}
+{% block title %}User Dashboard{% endblock %}
+{% block content %}
+<h2>Welcome, {{ user.full_name }}</h2>
+<p>Your email: {{ user.email }}</p>
+<a href="{{ url_for('book_slot') }}">Book Parking Spot</a>
+<a href="{{ url_for('booking_history') }}" class="btn btn-outline-primary mt-2">View Booking History</a>
+
 <a href="{{ url_for('logout') }}">Logout</a>
+
+{% endblock %}
+
+
+
+

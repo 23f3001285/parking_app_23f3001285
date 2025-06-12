@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Add Parking Lot</h2>
+<form method="POST">
+  <input type="text" name="location" placeholder="Location Name" required><br>
+  <textarea name="address" placeholder="Address" required></textarea><br>
+  <input type="text" name="pincode" placeholder="Pin Code" required><br>
+  <input type="number" step="0.01" name="price" placeholder="Price/hour" required><br>
+  <input type="number" name="max_spots" placeholder="Max Spots" required><br>
+  <button type="submit">Create Lot</button>
+</form>
+{% endblock %}

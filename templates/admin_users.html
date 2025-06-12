@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+{% block title %}Manage Users{% endblock %}
+{% block content %}
+<h2>All Users and Reservations</h2>
+<table border="1" cellpadding="10">
+  <thead>
+    <tr>
+      <th>Full Name</th>
+      <th>Email</th>
+      <th>Spot ID</th>
+      <th>Start Time</th>
+      <th>End Time</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for user in users %}
+      {% set user_reservations = reservations | selectattr("user_id", "equalto", user.id) | list %}
+      {% if user_reservations %}
+        {% for res in user_reservations %}
+          <tr>
+            <td>{{ user.full_name }}</td>
+            <td>{{ user.email }}</td>
+            <td>{{ res.spot_id }}</td>
+            <td>{{ res.start_time.strftime("%Y-%m-%d %H:%M") }}</td>
+            <td>{{ res.end_time.strftime("%Y-%m-%d %H:%M") }}</td>
+          </tr>
+        {% endfor %}
+      {% else %}
+        <tr>
+          <td>{{ user.full_name }}</td>
+          <td>{{ user.email }}</td>
+          <td colspan="3">No active reservations</td>
+        </tr>
+      {% endif %}
+    {% endfor %}
+  </tbody>
+</table>
+<a href="{{ url_for('admin_dashboard') }}">⬅ Back to Dashboard</a>
+{% endblock %}

@@ -1,2 +1,25 @@
+{% extends 'base.html' %}
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block content %}
 <h2>Welcome, Admin!</h2>
 <a href="{{ url_for('logout') }}">Logout</a>
+
+<hr>
+
+<h3>Manage Parking Lots</h3>
+<ul>
+    <li><a href="{{ url_for('add_parking_lot') }}">Add New Parking Lot</a></li>
+    <li><a href="{{ url_for('view_parking_lots') }}">View / Edit / Delete Lots</a></li>
+</ul>
+
+<h3>Manage Parking Spots</h3>
+<ul>
+    <li><a href="{{ url_for('manage_spots') }}">View All Parking Spots</a></li>
+</ul>
+
+<h3>Manage Users</h3>
+<ul>
+    <li><a href="{{ url_for('manage_users') }}">View All Users</a></li>
+</ul>
+{% endblock %}

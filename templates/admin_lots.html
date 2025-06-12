@@ -1,0 +1,20 @@
+<h1>Welcome to Admin Lots</h1>
+{% extends 'base.html' %}
+{% block content %}
+<h2>All Parking Lots</h2>
+<a href="{{ url_for('add_parking_lot') }}">Add New Lot</a>
+<ul>
+{% for lot in lots %}
+  <li>
+    <strong>{{ lot.location_name }}</strong> - {{ lot.address }} ({{ lot.pin_code }})<br>
+    ₹{{ lot.price_per_hour }}/hr | Max Spots: {{ lot.max_spots }} | Occupied: 
+    {{ lot.spots | selectattr('status', 'equalto', 'O') | list | length }}
+    <br>
+    <a href="{{ url_for('edit_lot', lot_id=lot.id) }}">Edit</a>
+    <form action="{{ url_for('delete_lot', lot_id=lot.id) }}" method="POST" style="display:inline;">
+      <button type="submit">Delete</button>
+    </form>
+  </li>
+{% endfor %}
+</ul>
+{% endblock %}

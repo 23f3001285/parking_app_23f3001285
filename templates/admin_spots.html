@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h2 class="my-4">Manage Parking Spots</h2>
+
+{% if lots %}
+  {% for lot in lots %}
+    <h4 class="mt-4">{{ lot.location_name }} - {{ lot.address }}</h4>
+    <table class="table table-sm table-bordered">
+      <thead>
+        <tr>
+          <th>Spot ID</th>
+          <th>Spot #</th>
+          <th>Status</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for spot in lot.spots %}
+          <tr>
+            <td>{{ spot.id }}</td>
+            <td>{{ spot.spot_number or loop.index }}</td>
+            <td>
+              {% if spot.status == 'A' %}
+                Available
+              {% elif spot.status == 'O' %}
+                Occupied
+              {% else %}
+                Unavailable
+              {% endif %}
+            </td>
+            <td>
+              {% if spot.status != 'O' %}
+                <a href="{{ url_for('toggle_spot_status', spot_id=spot.id) }}" class="btn btn-sm btn-warning">Toggle</a>
+              {% else %}
+                <span class="text-muted">Cannot toggle (Occupied)</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% endfor %}
+{% else %}
+  <p>No parking lots or spots available.</p>
+{% endif %}
+
+{% endblock %}
