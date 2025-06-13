@@ -1,4 +1,5 @@
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
+from pytz import timezone
 from flask import Flask, render_template, redirect, url_for, request, session, flash
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, login_user, logout_user, login_required, UserMixin, current_user
@@ -288,12 +289,27 @@ def user_dashboard():
         return "Unauthorized", 403
 
     try:
-        user_id = int(current_user.get_id().split(':')[1])
+        user_id = current_user.id
         user = db.session.get(User, user_id)
         #user = User.query.get(user_id)
         reservations = Reservation.query.filter_by(user_id=user_id).all()
+        active_booking = Reservation.query.filter_by(user_id=user_id,status='Booked').order_by(Reservation.parking_time.desc()).first()
+        
 
-        return render_template('user_dashboard.html', user=user, reservations=reservations)
+        # Auto-mark expired bookings
+        expired_bookings = Reservation.query.filter(
+        Reservation.user_id == user_id,
+        Reservation.status == 'Booked',
+        Reservation.leaving_time < datetime.now(timezone('Asia/Kolkata'))
+        ).all()
+
+        for booking in expired_bookings:
+            booking.status = 'Completed'
+            booking.spot.is_available = True
+
+        db.session.commit()
+        
+        return render_template('user_dashboard.html', user=user, reservations=reservations, active_booking=active_booking)
 
     except Exception as e:
         print("Error in user_dashboard:", e)
@@ -328,15 +344,29 @@ def book_slot():
        #lot_id = request.form.get('lot_id')
        #spot_id = int(request.form['spot_id'])
         lot_id = int(request.form['lot_id'])  # (optional usage)
-        start_time = datetime.strptime(request.form['start_time'], "%I:%M %p")
-        end_time = datetime.strptime(request.form['end_time'], "%I:%M %p")
+        raw_start = request.form['start_time'].strip().upper()
+        raw_end = request.form['end_time'].strip().upper()
+
+        # Get today's date
+        today = date.today()
+
+        try:
+            start_time = datetime.strptime(f"{today} {raw_start}", "%Y-%m-%d %I:%M %p")
+            end_time = datetime.strptime(f"{today} {raw_end}", "%Y-%m-%d %I:%M %p")
+        except ValueError as ve:
+            flash("Invalid time format. Please use format like '10:30 AM'", "danger")
+            return redirect(url_for('book_slot'))
+        
+        if end_time <= start_time:
+            flash("End time must be after start time.", "warning")
+            return redirect(url_for('book_slot'))
         
         spot = db.session.get(ParkingSpot, spot_id)
         lot = db.session.get(ParkingLot, spot.lot_id)
 
         duration_hours = (end_time - start_time).total_seconds() / 3600
-        cost = round(duration_hours * lot.price_per_hour, 2)
-
+        cost = round(duration_hours * lot.price_per_hour, 2) or 0.0
+        
         reservation = Reservation(
             user_id=current_user.id,
             spot_id=spot_id,
@@ -351,6 +381,7 @@ def book_slot():
         # Mark spot unavailable
         spot = db.session.get(ParkingSpot, spot_id)
         spot.is_available = False
+        spot.status = 'O'  # or 'B' for Booked
 
         db.session.commit()
         flash("Booking successful!", "success")
@@ -358,12 +389,13 @@ def book_slot():
 
     return render_template('book_slot.html', lots=lots, spots=available_spots)
 
-@app.route('/release/<int:reservation_id>')
+@app.route('/release/<int:reservation_id>', methods=['POST'])
 @login_required
 def release_slot(reservation_id):
     reservation = Reservation.query.get_or_404(reservation_id)
-
-    if current_user.role == 'user' and reservation.user_id != int(current_user.id.split(':')[1]):
+    
+    user_id = int(current_user.get_id().split(':')[1])
+    if current_user.role == 'user' and reservation.user_id != user_id:
         flash("Unauthorized", "danger")
         return redirect(url_for('user_dashboard'))
 
@@ -371,7 +403,7 @@ def release_slot(reservation_id):
         flash("Already released", "warning")
         return redirect(url_for('user_dashboard'))
 
-    reservation.leaving_time = datetime.utcnow()
+    reservation.leaving_time = datetime.now()
     reservation.status = 'Completed'
 
     # Cost Calculation (in hours)

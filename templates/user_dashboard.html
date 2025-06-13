@@ -3,10 +3,17 @@
 {% block content %}
 <h2>Welcome, {{ user.full_name }}</h2>
 <p>Your email: {{ user.email }}</p>
-<a href="{{ url_for('book_slot') }}">Book Parking Spot</a>
+<a href="{{ url_for('book_slot') }}" class="btn btn-outline-primary mt-2">Book Parking Slot</a>
 <a href="{{ url_for('booking_history') }}" class="btn btn-outline-primary mt-2">View Booking History</a>
+{% if active_booking and active_booking.status == 'Booked' %}
+    <form method="POST" action="{{ url_for('release_slot', reservation_id=active_booking.id) }}">
+        <button type="submit" class="btn btn-danger btn-sm mt-3">Release Spot</button>
+    </form>
+{% else %}
+    <span class="text-muted mt-3 d-block">Released</span>
+{% endif %}
 
-<a href="{{ url_for('logout') }}">Logout</a>
+<a href="{{ url_for('logout') }}" class="btn btn-outline-primary mt-2">Logout</a>
 
 {% endblock %}
 

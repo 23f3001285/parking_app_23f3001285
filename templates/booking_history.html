@@ -22,10 +22,27 @@
                 <td>{{ booking.spot.lot.name }}</td>
                 <td>{{ booking.spot_id }}</td>
                 <td>{{ booking.parking_time.strftime('%d %b %Y %I:%M %p') }}</td>
-                <td>{{ booking.leaving_time.strftime('%d %b %Y %I:%M %p') or "Still Parked" }}</td>
-                <td>{{ booking.status }}</td>
-                <td><span class="badge bg-success">Booked</span></td>
-                <td>₹{{ "%.2f"|format(booking.cost) }}</td>
+                <td>
+                    {% if booking.leaving_time %}
+                        {{ booking.leaving_time.strftime('%d %b %Y %I:%M %p') }}
+                    {% else %}
+                        <span class="text-warning">Still Active</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if booking.status == 'Completed' %}
+                        <span class="badge bg-secondary">Completed</span>
+                    {% else %}
+                        <span class="badge bg-success">Active</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if booking.cost is not none %}
+                        ₹{{ "%.2f"|format(booking.cost) }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
             </tr>
             {% endfor %}
         </tbody>

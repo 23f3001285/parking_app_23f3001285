@@ -20,6 +20,7 @@ class User(db.Model, UserMixin):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     reservations = db.relationship('Reservation', backref='user', lazy=True)
 
+
 class ParkingLot(db.Model):
     __tablename__ = 'parking_lots'
     id = db.Column(db.Integer, primary_key=True)
