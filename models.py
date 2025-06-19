@@ -29,6 +29,7 @@ class ParkingLot(db.Model):
     pin_code = db.Column(db.String(6), nullable=False)
     price_per_hour = db.Column(db.Float, nullable=False)
     max_spots = db.Column(db.Integer, nullable=False)
+    status = db.Column(db.String(20), default='Active')  # Active or Inactive
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     spots = db.relationship('ParkingSpot',backref='lot',lazy=True,cascade='all, delete',passive_deletes=True)
 
@@ -37,7 +38,7 @@ class ParkingSpot(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     lot_id = db.Column(db.Integer, db.ForeignKey('parking_lots.id', ondelete='CASCADE'), nullable=False)
     status = db.Column(db.String(1), default='A')  # A - Available, O - Occupied
-    spot_number = db.Column(db.String(20), nullable=True)  
+    spot_number = db.Column(db.String(20), nullable=False)  
     reservation = db.relationship('Reservation', backref='spot', uselist=False)
     is_available = db.Column(db.Boolean, default=True)
 

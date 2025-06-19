@@ -129,8 +129,13 @@ def add_parking_lot():
         db.session.commit()
 
         # Create spots
-        for _ in range(max_spots):
-            spot = ParkingSpot(lot_id=lot.id, status='A')
+        for i in range(1, max_spots + 1):
+            spot = ParkingSpot(
+                lot_id=lot.id,
+                spot_number=f"S{i}",
+                status='A',
+                is_available=True
+            )   
             db.session.add(spot)
 
         db.session.commit()
@@ -153,7 +158,9 @@ def view_parking_lots():
 def edit_lot(lot_id):
     if current_user.role != 'admin':
         return "Unauthorized", 403
+    
     lot = ParkingLot.query.get(lot_id)
+
     if not lot:
         flash("Parking lot not found.", "danger")
         return redirect(url_for('view_parking_lots'))
@@ -165,10 +172,15 @@ def edit_lot(lot_id):
         lot.address = request.form['address']
         lot.pin_code = request.form['pincode']
         lot.price_per_hour = float(request.form['price'])
-
-        db.session.commit()
-        flash("Parking lot updated.", "info")
-        return redirect(url_for('view_parking_lots'))
+        new_spots = int(request.form['max_spots'])
+        
+        if new_spots < 0:
+            flash("Max spots must be a positive number.", "danger")
+        else:
+            lot.max_spots = new_spots
+            db.session.commit()
+            flash("Parking lot updated, including max spots.", "success")
+            return redirect(url_for('view_parking_lots'))
 
     return render_template('edit_parking_lot.html', lot=lot)
 
@@ -185,21 +197,80 @@ def delete_lot(lot_id):
         if spot.status == 'O':
             flash("Cannot delete lot: Some spots are occupied", "danger")
             return redirect(url_for('view_parking_lots'))
-
+        if spot.reservation:  
+            flash("Cannot delete lot: Spot has reservation history", "danger")
+            return redirect(url_for('view_parking_lots'))
+        
     db.session.delete(lot)
     db.session.commit()
     flash("Parking lot deleted", "success")
     return redirect(url_for('view_parking_lots'))
 
+@app.route('/admin/add_spots/<int:lot_id>', methods=['POST'])
+@login_required
+def add_missing_spots(lot_id):
+    if current_user.role != 'admin':
+        return "Unauthorized", 403
+
+    lot = ParkingLot.query.get_or_404(lot_id)
+    current_spot_count = ParkingSpot.query.filter_by(lot_id=lot.id).count()
+    missing_spots = lot.max_spots - current_spot_count
+
+    if missing_spots <= 0:
+        flash("No missing spots to add. All spots already exist.", "info")
+        return redirect(url_for('view_parking_lots'))
+
+    for i in range(1, missing_spots + 1):
+        # Generate a unique spot number like S6, S7, ...
+        spot_number = f"S{current_spot_count + i}"
+        new_spot = ParkingSpot(
+            lot_id=lot.id,
+            status='A',
+            spot_number=spot_number,
+            is_available=True
+        )
+        db.session.add(new_spot)
+
+    db.session.commit()
+    flash(f"{missing_spots} missing spot(s) added to {lot.location_name}.", "success")
+    return redirect(url_for('view_parking_lots'))
+
+
 @app.route('/admin/spots')
 @login_required
 def manage_spots():
     if current_user.role != 'admin':
-        return redirect(url_for('login'))
+        return "Unauthorized", 403
+
+    try:
+        # Auto-release expired bookings here
+        now = datetime.now(timezone('Asia/Kolkata'))
+        expired_bookings = Reservation.query.filter(
+            Reservation.status.in_(['Booked', 'O']),
+            Reservation.leaving_time < now
+        ).all()
+
+        for booking in expired_bookings:
+            booking.status = 'Completed'
+            booking.spot.is_available = True
+            booking.spot.status = 'A' 
+
+        db.session.commit()
+
+        # Then fetch lots/spots as usual
+        lots = ParkingLot.query.all()
+        selected_lot_id = request.args.get('lot_id')
+        spots = []
+
+        if selected_lot_id:
+            spots = ParkingSpot.query.filter_by(lot_id=selected_lot_id).all()
+
+        return render_template("admin_spots.html", lots=lots, spots=spots, selected_lot_id=selected_lot_id)
+
+    except Exception as e:
+        print("Error in manage_slots:", e)
+        return "Internal Server Error", 500 
     
-    spots = ParkingSpot.query.all()
-    lots = ParkingLot.query.all()
-    return render_template('admin_spots.html', lots=lots, spots=spots)  
 
 @app.route('/admin/spots/<int:spot_id>/toggle')
 @login_required
@@ -208,14 +279,24 @@ def toggle_spot_status(spot_id):
         return "Unauthorized", 403
 
     spot = ParkingSpot.query.get_or_404(spot_id)
+    current_status = spot.status.strip().upper()
 
-    # Toggle between Available (A) and Unavailable (U)
-    if spot.status == 'A':
+    print("Toggle Requested for Spot ID:", spot.id)
+    print("Current Status Before Toggle:", repr(current_status))
+
+    if current_status == 'A':
         spot.status = 'U'
-    elif spot.status == 'U':
+        print("Status changed to: U (Unavailable)")
+    elif current_status == 'U':
         spot.status = 'A'
-    else:
+        print("Status changed to: A (Available)")
+    elif current_status == 'O':
+        print("Cannot toggle: Spot is occupied (O)")
         flash("Spot status cannot be toggled while Occupied", "danger")
+        return redirect(url_for('manage_spots'))
+    else:
+        print("Unrecognized status value")
+        flash("Unknown status value", "danger")
         return redirect(url_for('manage_spots'))
 
     db.session.commit()
@@ -224,7 +305,7 @@ def toggle_spot_status(spot_id):
 
 
 
-@app.route('/admin/users')
+@app.route('/admin/users', methods = ['GET', 'POST'])
 @login_required
 def manage_users():
     if current_user.role != 'admin':
@@ -232,8 +313,20 @@ def manage_users():
         return redirect(url_for('login'))
 
     users = User.query.all()
-    reservations = Reservation.query.all()
-    return render_template('admin_users.html', users=users, reservations=reservations)
+    selected_user = None
+    reservations = []
+
+    if request.method == 'POST':
+        user_id = request.form.get('user_id')
+        if user_id:
+            selected_user = User.query.get(int(user_id))
+            reservations = Reservation.query.filter_by(user_id=user_id).all()
+        else:
+            reservations = Reservation.query.all()
+    else:
+        reservations = Reservation.query.all()
+
+    return render_template('admin_users.html', users=users, reservations=reservations, selected_user=selected_user)
 
 
 @app.route('/admin/users/<int:user_id>/bookings')
@@ -248,17 +341,20 @@ def view_user_bookings(user_id):
     return render_template('user_bookings.html', user=user, bookings=bookings)
 
 
-@app.route('/admin/users/<int:user_id>/delete')
+@app.route('/admin/users/<int:user_id>/delete', methods=['POST'])
 @login_required
 def delete_user(user_id):
     if current_user.role != 'admin':
         return redirect(url_for('login'))
 
     user = User.query.get_or_404(user_id)
+
+    
+    Reservation.query.filter_by(user_id=user.id).delete()
     db.session.delete(user)
     db.session.commit()
     flash("User deleted", "info")
-    return redirect(url_for('admin_users'))
+    return redirect(url_for('manage_users'))
 
 
 @app.route('/admin/bookings')
@@ -306,9 +402,20 @@ def user_dashboard():
         for booking in expired_bookings:
             booking.status = 'Completed'
             booking.spot.is_available = True
+            booking.spot.status = 'A' 
 
         db.session.commit()
         
+        print("All Bookings:", reservations)
+        for r in reservations:
+            print(f"Booking ID {r.id} | Status: {r.status} | Start: {r.parking_time} | End: {r.leaving_time}")
+        print("System Time Now:", datetime.now())
+        print("Active Booking:", active_booking)
+        if active_booking:
+            print("Status:", active_booking.status)
+            print("Start:", active_booking.parking_time)
+            print("End:", active_booking.leaving_time)
+
         return render_template('user_dashboard.html', user=user, reservations=reservations, active_booking=active_booking)
 
     except Exception as e:
@@ -384,6 +491,9 @@ def book_slot():
         spot.status = 'O'  # or 'B' for Booked
 
         db.session.commit()
+        if not spot:
+            flash("Invalid spot selected.", "danger")
+            return redirect(url_for('book_slot'))
         flash("Booking successful!", "success")
         return redirect(url_for('user_dashboard'))
 
@@ -419,6 +529,7 @@ def release_slot(reservation_id):
     flash(f"Slot released. Total cost: ₹{reservation.cost}", "success")
     return redirect(url_for('user_dashboard'))
 
+
 @app.route('/logout')
 @login_required
 def logout():
@@ -426,7 +537,10 @@ def logout():
     return redirect(url_for('login'))
 
 if __name__ == '__main__':
-    app.run(debug=True, use_reloader=False)
+    with app.app_context():
+        db.create_all()
+    app.run(debug=True)
+
 
 
 

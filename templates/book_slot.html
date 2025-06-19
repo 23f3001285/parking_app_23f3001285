@@ -12,7 +12,7 @@
     <label>Select Spot:</label>
     <select name="spot_id" id="spot" required>
         {% for spot in spots %}
-           <option value="{{ spot.id }}" data-lot="{{ spot.lot_id }}">
+           <option value="{{ spot.id }}" data-lot="{{ spot.lot_id }}" {% if spot.status == 'O' %}disabled{% endif %}>
                {% if spot.status == 'O' %}
                    <span style="color: red;">Occupied</span>
                {% else %}
@@ -24,10 +24,10 @@
     </select>
 
     <label>Start Time:</label>
-    <input type="text" name="start_time" placeholder="e.g. 10:00 AM" required><br><br>
+    <input type="text" name="start_time" id="start_time" placeholder="e.g. 10:00 AM" required><br><br>
 
     <label>End Time:</label>
-    <input type="text" name="end_time" placeholder="e.g. 12:00 PM" required><br><br>
+    <input type="text" name="end_time" id="end_time" placeholder="e.g. 12:00 PM" required><br><br>
     
     <p><strong>Estimated Cost: ₹<span id="cost">0.00</span></strong></p>
 
@@ -89,5 +89,7 @@ document.getElementById('start_time').addEventListener('input', calculateCost);
 document.getElementById('end_time').addEventListener('input', calculateCost);
 </script>
 
-{% endblock %}
+{% endblock %} 
+
+
 

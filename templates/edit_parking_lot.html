@@ -19,6 +19,10 @@
             <label for="price">Price Per Hour</label>
             <input type="number" class="form-control" name="price" id="price" value="{{ lot.price_per_hour }}" required step="0.01">
         </div>
+        <div class="form-group mb-3">
+            <label for="max_spots">Max Spots</label>
+            <input type="number" class="form-control" name="max_spots" id="max_spots" value="{{ lot.max_spots }}" required step="0.01">
+        </div>
         <button type="submit" class="btn btn-primary">Update Lot</button>
         <a href="{{ url_for('view_parking_lots') }}" class="btn btn-secondary">Cancel</a>
     </form>

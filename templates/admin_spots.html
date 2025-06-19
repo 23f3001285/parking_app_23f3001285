@@ -33,7 +33,7 @@
               {% if spot.status != 'O' %}
                 <a href="{{ url_for('toggle_spot_status', spot_id=spot.id) }}" class="btn btn-sm btn-warning">Toggle</a>
               {% else %}
-                <span class="text-muted">Cannot toggle (Occupied)</span>
+                <button class="btn btn-secondary btn-sm" disabled>Occupied</button>
               {% endif %}
             </td>
           </tr>
@@ -44,5 +44,5 @@
 {% else %}
   <p>No parking lots or spots available.</p>
 {% endif %}
-
+<a href="{{ url_for('admin_dashboard') }}">⬅ Back to Dashboard</a>
 {% endblock %}
