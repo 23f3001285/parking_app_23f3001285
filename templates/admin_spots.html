@@ -1,48 +1,80 @@
 {% extends 'base.html' %}
-
 {% block content %}
-<h2 class="my-4">Manage Parking Spots</h2>
+<div class="container mt-4">
+  <h2 class="mb-4">Manage Parking Spots</h2>
 
-{% if lots %}
-  {% for lot in lots %}
-    <h4 class="mt-4">{{ lot.location_name }} - {{ lot.address }}</h4>
-    <table class="table table-sm table-bordered">
-      <thead>
-        <tr>
-          <th>Spot ID</th>
-          <th>Spot #</th>
-          <th>Status</th>
-          <th>Action</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for spot in lot.spots %}
-          <tr>
-            <td>{{ spot.id }}</td>
-            <td>{{ spot.spot_number or loop.index }}</td>
-            <td>
-              {% if spot.status == 'A' %}
-                Available
-              {% elif spot.status == 'O' %}
-                Occupied
-              {% else %}
-                Unavailable
-              {% endif %}
-            </td>
-            <td>
-              {% if spot.status != 'O' %}
-                <a href="{{ url_for('toggle_spot_status', spot_id=spot.id) }}" class="btn btn-sm btn-warning">Toggle</a>
-              {% else %}
-                <button class="btn btn-secondary btn-sm" disabled>Occupied</button>
-              {% endif %}
-            </td>
-          </tr>
+  <form method="GET" action="{{ url_for('manage_spots') }}" class="row g-3 mb-4">
+    <div class="col-md-5">
+      <label for="lot" class="form-label">Filter by Lot:</label>
+      <select name="lot_id" id="lot" class="form-select">
+        <option value="">-- All Lots --</option>
+        {% for lot in lots %}
+          <option value="{{ lot.id }}" {% if selected_lot_id and selected_lot_id|int == lot.id %}selected{% endif %}>{{ lot.location_name }}</option>
         {% endfor %}
-      </tbody>
-    </table>
+      </select>
+    </div>
+    <div class="col-md-5">
+      <label for="status" class="form-label">Filter by Status:</label>
+      <select name="status" id="status" class="form-select">
+        <option value="">-- All Status --</option>
+        <option value="A" {% if selected_status == 'A' %}selected{% endif %}>Available</option>
+        <option value="O" {% if selected_status == 'O' %}selected{% endif %}>Occupied</option>
+        <option value="U" {% if selected_status == 'U' %}selected{% endif %}>Unavailable</option>
+      </select>
+    </div>
+    <div class="col-md-2 d-flex align-items-end">
+      <button type="submit" class="btn btn-primary w-100">Search</button>
+    </div>
+  </form>
+
+{% if spots %}
+  {% set grouped_spots = {} %}
+  {% for spot in spots %}
+    {% set _ = grouped_spots.setdefault(spot.lot_id, []).append(spot) %}
+  {% endfor %}
+
+{% for lot in lots %}
+    {% if grouped_spots[lot.id] is defined %}
+      <h4 class="mt-4">{{ lot.location_name }} - {{ lot.address }}</h4>
+      <table class="table table-sm table-bordered">
+        <thead>
+          <tr>
+            <th>Spot ID</th>
+            <th>Spot #</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for spot in grouped_spots[lot.id] %}
+            <tr>
+              <td>{{ spot.id }}</td>
+              <td>{{ spot.spot_number or loop.index }}</td>
+              <td>
+                {% if spot.status == 'A' %}
+                  Available
+                {% elif spot.status == 'O' %}
+                  Occupied
+                {% else %}
+                  Unavailable
+                {% endif %}
+              </td>
+              <td>
+                {% if spot.status != 'O' %}
+                  <a href="{{ url_for('toggle_spot_status', spot_id=spot.id) }}" class="btn btn-sm btn-warning">Toggle</a>
+                {% else %}
+                  <button class="btn btn-secondary btn-sm" disabled>Occupied</button>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% endif %}
   {% endfor %}
 {% else %}
-  <p>No parking lots or spots available.</p>
+  <p>No matching parking spots found.</p>
 {% endif %}
 <a href="{{ url_for('admin_dashboard') }}">⬅ Back to Dashboard</a>
 {% endblock %}
+

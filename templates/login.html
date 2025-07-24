@@ -1,22 +1,45 @@
-{% extends 'base.html' %}
-
+{% extends "base.html" %}
+{% block title %}Login{% endblock %}
 {% block content %}
-<h2>Login</h2>
-<form method="POST" action="{{ url_for('login') }}">
-  <input type="text" name="username" placeholder="Enter your username" required>
-  <input type="password" name="password" placeholder="Enter your password" required>
-  <button type="submit">Login</button>
-</form>
+<div class="container mt-5">
+  <div class="row justify-content-center">
+    <div class="col-md-6">
+      <div class="card p-4 shadow-sm border-0">
+        <h2 class="text-center mb-4">Welcome Back</h2>
+        <form method="POST" novalidate>
+          {{ form.hidden_tag() }}
 
-{% with messages = get_flashed_messages(with_categories=true) %}
-  {% if messages %}
-    {% for category, message in messages %}
-      <div class="alert alert-{{ category }}">{{ message }}</div>
-    {% endfor %}
-  {% endif %}
-{% endwith %}
+          <div class="mb-3">
+            {{ form.login_input.label(class="form-label fw-semibold") }}
+            {{ form.login_input(class="form-control", placeholder="Email or username", required=True) }}
+            {% for error in form.login_input.errors %}
+              <div class="text-danger small">{{ error }}</div>
+            {% endfor %}
+          </div>
 
-<p>New user? <a href="{{ url_for('register') }}">Register here</a></p>
+          <div class="mb-3">
+            {{ form.password.label(class="form-label fw-semibold") }}
+            {{ form.password(class="form-control", placeholder="Password", required=True) }}
+            {% for error in form.password.errors %}
+              <div class="text-danger small">{{ error }}</div>
+            {% endfor %}
+          </div>
 
+          {% if error %}
+            <div class="text-danger text-center mb-3">{{ error }}</div>
+          {% endif %}
+
+          <div class="d-grid">
+            {{ form.submit(class="btn btn-primary btn-lg") }}
+          </div>
+        </form>
+
+        <div class="mt-3 text-center">
+          <span class="text-muted">Don't have an account?</span>
+          <a href="{{ url_for('register') }}" class="fw-semibold">Register here</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}
-

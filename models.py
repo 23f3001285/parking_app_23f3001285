@@ -39,7 +39,7 @@ class ParkingSpot(db.Model):
     lot_id = db.Column(db.Integer, db.ForeignKey('parking_lots.id', ondelete='CASCADE'), nullable=False)
     status = db.Column(db.String(1), default='A')  # A - Available, O - Occupied
     spot_number = db.Column(db.String(20), nullable=False)  
-    reservation = db.relationship('Reservation', backref='spot', uselist=False)
+    reservation = db.relationship('Reservation', backref='spot', lazy=True)
     is_available = db.Column(db.Boolean, default=True)
 
 class Reservation(db.Model):

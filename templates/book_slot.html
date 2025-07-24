@@ -1,38 +1,45 @@
 {% extends 'base.html' %}
-
 {% block content %}
-<h2>Book a Parking Slot</h2>
-<form method="POST" action="{{ url_for('book_slot') }}">
-    <label>Select Lot:</label>
-    <select name="lot_id" id="lot" required>
-        {% for lot in lots %}
-           <option value="{{ lot.id }}" data-price="{{ lot.price_per_hour }}">{{ lot.location_name }}</option>
-        {% endfor %}
-    </select>
-    <label>Select Spot:</label>
-    <select name="spot_id" id="spot" required>
-        {% for spot in spots %}
-           <option value="{{ spot.id }}" data-lot="{{ spot.lot_id }}" {% if spot.status == 'O' %}disabled{% endif %}>
-               {% if spot.status == 'O' %}
-                   <span style="color: red;">Occupied</span>
-               {% else %}
-                   <span style="color: green;">Available</span>
-               {% endif %}
-              Lot: {{ spot.lot.location_name }} | Spot #: {{ spot.spot_number }}
-           </option>
-        {% endfor %}
-    </select>
+<div class="row">
+  <div class="col-md-8 offset-md-2">
+    <h2 class="mb-4">Book a Parking Slot</h2>
+    <form method="POST" action="{{ url_for('book_slot') }}">
+      <div class="mb-3">
+        <label for="lot" class="form-label">Select Lot:</label>
+        <select name="lot_id" id="lot" class="form-select" required onchange="filterSpots()">
+          {% for lot in lots %}
+            <option value="{{ lot.id }}" data-price="{{ lot.price_per_hour }}">{{ lot.location_name }}</option>
+          {% endfor %}
+        </select>
+      </div>
 
-    <label>Start Time:</label>
-    <input type="text" name="start_time" id="start_time" placeholder="e.g. 10:00 AM" required><br><br>
+      <div class="mb-3">
+        <label for="spot" class="form-label">Select Spot:</label>
+        <select name="spot_id" id="spot" class="form-select" required>
+          {% for spot in spots %}
+            <option value="{{ spot.id }}" data-lot="{{ spot.lot_id }}" {% if spot.status == 'O' %}disabled{% endif %}>
+              Lot: {{ spot.lot.location_name }} | Spot #: {{ spot.spot_number }} {% if spot.status == 'O' %}- Occupied{% else %}- Available{% endif %}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
 
-    <label>End Time:</label>
-    <input type="text" name="end_time" id="end_time" placeholder="e.g. 12:00 PM" required><br><br>
-    
-    <p><strong>Estimated Cost: ₹<span id="cost">0.00</span></strong></p>
+      <div class="mb-3">
+        <label for="start_time" class="form-label">Start Time:</label>
+        <input type="text" name="start_time" id="start_time" class="form-control" placeholder="e.g. 10:00 AM" required>
+      </div>
 
-    <button type="submit">Book Slot</button>
-</form>
+      <div class="mb-3">
+        <label for="end_time" class="form-label">End Time:</label>
+        <input type="text" name="end_time" id="end_time" class="form-control" placeholder="e.g. 12:00 PM" required>
+      </div>
+
+      <p><strong>Estimated Cost: ₹<span id="cost">0.00</span></strong></p>
+
+      <button type="submit" class="btn btn-primary">Book Slot</button>
+    </form>
+  </div>
+</div>
 
 <script>
 function filterSpots() {

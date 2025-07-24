@@ -1,54 +1,52 @@
-<!-- templates/booking_history.html -->
 {% extends "base.html" %}
-
 {% block content %}
 <div class="container mt-4">
-    <h2>Your Booking History</h2>
-    {% if reservations %}
-    <table class="table table-bordered mt-3">
-        <thead class="table-dark">
-            <tr>
-                <th>Location</th>
-                <th>Spot ID</th>
-                <th>Start Time</th>
-                <th>End Time</th>
-                <th>Status</th>
-                <th>Cost (₹)</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for booking in reservations %}
-            <tr>
-                <td>{{ booking.spot.lot.location_name }}</td>
-                <td>{{ booking.spot_id }}</td>
-                <td>{{ booking.parking_time.strftime('%d %b %Y %I:%M %p') }}</td>
-                <td>
-                    {% if booking.leaving_time %}
-                        {{ booking.leaving_time.strftime('%d %b %Y %I:%M %p') }}
-                    {% else %}
-                        <span class="text-warning">Still Active</span>
-                    {% endif %}
-                </td>
-                <td>
-                    {% if booking.status == 'Completed' %}
-                        <span class="badge bg-secondary">Completed</span>
-                    {% else %}
-                        <span class="badge bg-success">Active</span>
-                    {% endif %}
-                </td>
-                <td>
-                    {% if booking.cost is not none %}
-                        ₹{{ "%.2f"|format(booking.cost) }}
-                    {% else %}
-                        -
-                    {% endif %}
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
+  <h2 class="mb-4">Your Booking History</h2>
+  {% if reservations %}
+    <table class="table table-bordered">
+      <thead class="table-dark">
+        <tr>
+          <th>Location</th>
+          <th>Spot ID</th>
+          <th>Start Time</th>
+          <th>End Time</th>
+          <th>Status</th>
+          <th>Cost (₹)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for booking in reservations %}
+        <tr>
+          <td>{{ booking.spot.lot.location_name }}</td>
+          <td>{{ booking.spot_id }}</td>
+          <td>{{ booking.parking_time.strftime('%d %b %Y %I:%M %p') }}</td>
+          <td>
+            {% if booking.leaving_time %}
+              {{ booking.leaving_time.strftime('%d %b %Y %I:%M %p') }}
+            {% else %}
+              <span class="text-warning">Still Active</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if booking.status == 'Completed' %}
+              <span class="badge bg-secondary">Completed</span>
+            {% else %}
+              <span class="badge bg-success">Active</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if booking.cost is not none %}
+              ₹{{ "%.2f"|format(booking.cost) }}
+            {% else %}
+              -
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
     </table>
-    {% else %}
+  {% else %}
     <p>No bookings found.</p>
-    {% endif %}
+  {% endif %}
 </div>
 {% endblock %}

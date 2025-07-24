@@ -1,37 +1,44 @@
 {% extends 'base.html' %}
-
 {% block content %}
-<h2 class="my-4">All Reservations</h2>
-<table class="table table-bordered">
-    <thead>
+<div class="container mt-5">
+  <h2 class="mb-4">All Reservations</h2>
+
+  <div class="table-responsive">
+    <table class="table table-hover table-bordered align-middle">
+      <thead class="table-light">
         <tr>
-            <th>User</th>
-            <th>Spot #</th>
-            <th>Lot Location</th>
-            <th>Start Time</th>
-            <th>Leaving Time</th>
-            <th>Status</th>
-            <th>Cost</th>
+          <th>User</th>
+          <th>Spot #</th>
+          <th>Location</th>
+          <th>Start Time</th>
+          <th>Leaving Time</th>
+          <th>Status</th>
+          <th>Cost</th>
         </tr>
-    </thead>
-    <tbody>
+      </thead>
+      <tbody>
         {% for b in bookings %}
         <tr>
-            <td>{{ b.user_name }}</td>
-            <td>{{ b.spot_number }}</td>
-            <td>{{ b.lot_location }}</td>
-            <td>{{ b.parking_time.strftime('%Y-%m-%d %H:%M') }}</td>
-            <td>
-                {% if b.leaving_time %}
-                    {{ b.leaving_time.strftime('%Y-%m-%d %H:%M') }}
-                {% else %}
-                    —
-                {% endif %}
-            </td>
-            <td>{{ b.status }}</td>
-            <td>₹{{ b.cost }}</td>
+          <td>{{ b.user_name }}</td>
+          <td>{{ b.spot_number }}</td>
+          <td>{{ b.lot_location }}</td>
+          <td>{{ b.parking_time.strftime('%Y-%m-%d %H:%M') }}</td>
+          <td>
+            {% if b.leaving_time %}
+              {{ b.leaving_time.strftime('%Y-%m-%d %H:%M') }}
+            {% else %}
+              <span class="text-muted">—</span>
+            {% endif %}
+          </td>
+          <td>
+            <span class="badge bg-{{ 'success' if b.status == 'Completed' else 'warning' }}">{{ b.status }}</span>
+          </td>
+          <td>₹{{ b.cost }}</td>
         </tr>
         {% endfor %}
-    </tbody>
-</table>
+      </tbody>
+    </table>
+  </div>
+</div>
 {% endblock %}
+    

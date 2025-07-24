@@ -1,14 +1,17 @@
 from datetime import date, datetime, timedelta
 from pytz import timezone
-from flask import Flask, render_template, redirect, url_for, request, session, flash
+from flask import Flask, render_template, redirect, url_for, request, session, flash, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, login_user, logout_user, login_required, UserMixin, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from models import db, Admin, User, ParkingLot, ParkingSpot, Reservation 
 import os
-from sqlalchemy import or_ 
+from forms import RegistrationForm, LoginForm
+from collections import defaultdict, Counter
+from sqlalchemy import func, cast, Date, or_ 
+import json
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static')
 basedir = os.path.abspath(os.path.dirname(__file__))
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'parking.db')
 #app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///instance/parking.db'
@@ -20,7 +23,6 @@ login_manager.init_app(app)
 login_manager.login_view = 'login'
 
 # --- Custom UserLoader for Flask-Login ---
-from flask_login import UserMixin
 
 class UnifiedUser(UserMixin):
     def __init__(self, user_id, role):
@@ -53,61 +55,127 @@ def home():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    if request.method == 'POST':
-        login_input = request.form['username']
-        username = request.form['username']
-        password = request.form['password']
-        print(f"Login attempt: {username}")
+    form = LoginForm()
+    error = None
 
-        user = User.query.filter((User.email == username) | (User.full_name == username)).first()
+    if form.validate_on_submit():
+        login_input = form.login_input.data
+        password = form.password.data
+
+        # Try user login with email or full name
+        user = User.query.filter(
+            (User.email == login_input) | (User.full_name == login_input)
+        ).first()
 
         if user and check_password_hash(user.password, password):
             login_user(UnifiedUser(str(user.id), 'user'))
             session['user_id'] = user.id
             session['role'] = 'user'
-            print("User login success")
             return redirect(url_for('user_dashboard'))
 
-        # Now check for Admin
-        admin = Admin.query.filter_by(username=username).first()
+        # Admin login
+        admin = Admin.query.filter_by(username=login_input).first()
         if admin and check_password_hash(admin.password, password):
             login_user(UnifiedUser(str(admin.id), 'admin'))
             session['admin_id'] = admin.id
             session['role'] = 'admin'
-            print("Admin login success")
             return redirect(url_for('admin_dashboard'))
 
-        print("Login failed: Invalid credentials")
-        return render_template('login.html', error="Invalid username or password")
+        error = "Invalid username or password"
 
-    return render_template('login.html')
+    return render_template('login.html', form=form, error=error)
+
+
 
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
-    if request.method == 'POST':
-        full_name = request.form['full_name']
-        email = request.form['email']
-        password = generate_password_hash(request.form['password'])
+    form = RegistrationForm()
+    if form.validate_on_submit():
+        full_name = form.full_name.data.strip()
+        email = form.email.data.strip().lower()
+        password = form.password.data
+        confirm_password = form.confirm_password.data
 
-        if User.query.filter_by(email=email).first():
-            flash("User already exists", "warning")
-            return redirect(url_for('register'))
+        if password != confirm_password:
+            flash("Passwords do not match.", "danger")
+            return render_template("register.html", form=form)
 
-        new_user = User(full_name=full_name, email=email, password=password)
+        existing_user = User.query.filter_by(email=email).first()
+        if existing_user:
+            flash("Email already registered.", "warning")
+            return render_template("register.html", form=form)
+
+        hashed_pw = generate_password_hash(password)
+        new_user = User(full_name=full_name, email=email, password=hashed_pw)
         db.session.add(new_user)
         db.session.commit()
+
         flash("Registration successful. Please log in.", "success")
         return redirect(url_for('login'))
 
-    return render_template('register.html')
+    return render_template("register.html", form=form)
+
+
 
 @app.route('/admin/dashboard')
 @login_required
 def admin_dashboard():
     if current_user.role != 'admin':
         return "Unauthorized", 403
-    return render_template('admin_dashboard.html')
+
+    bookings = Reservation.query.all()
+
+    # Group by date
+    bookings_by_date = defaultdict(int)
+    for booking in bookings:
+        date_str = booking.parking_time.strftime('%Y-%m-%d')
+        bookings_by_date[date_str] += 1
+
+    sorted_dates = sorted(bookings_by_date.items())
+    dates = [d for d, _ in sorted_dates]
+    counts = [c for _, c in sorted_dates]
+
+    # Count bookings per lot
+    lot_bookings = Counter()
+    for booking in bookings:
+        if booking.spot and booking.spot.lot:
+            lot_bookings[booking.spot.lot.location_name] += 1
+
+    lots = list(lot_bookings.keys())
+    lot_counts = list(lot_bookings.values())
+
+    # Top users by number of bookings
+    user_counts = db.session.query(
+        User.full_name, db.func.count(Reservation.id)
+    ).join(Reservation).group_by(User.full_name).order_by(db.func.count(Reservation.id).desc()).limit(5).all()
+
+    top_users = [u[0] for u in user_counts]
+    user_booking_counts = [u[1] for u in user_counts]
+
+    # Count available vs occupied spots
+    from models import ParkingSpot  # if not already imported
+    available_count = ParkingSpot.query.filter_by(status='Available').count()
+    occupied_count = ParkingSpot.query.filter_by(status='Occupied').count()
+
+    spot_status_data = {
+        'labels': ['Available', 'Occupied'],
+        'counts': [available_count, occupied_count]
+    }
+
+    bookings_data = {
+        'dates': dates,
+        'counts': counts,
+        'top_users': top_users,
+        'user_booking_counts': user_booking_counts
+    }
+
+    lots_data = {
+        'lots': lots,
+        'counts': lot_counts
+    }
+
+    return render_template("admin_dashboard.html", bookings_data=bookings_data, lots_data=lots_data, spot_status_data=spot_status_data)
 
 @app.route('/admin/add_lot', methods=['GET', 'POST'])
 @login_required
@@ -141,7 +209,7 @@ def add_parking_lot():
         db.session.commit()
         flash("Parking lot created successfully", "success")
         return redirect(url_for('admin_dashboard'))
-
+    
     return render_template('add_parking_lot.html')
 
 @app.route('/admin/lots')
@@ -236,7 +304,7 @@ def add_missing_spots(lot_id):
     return redirect(url_for('view_parking_lots'))
 
 
-@app.route('/admin/spots')
+@app.route('/admin/spots', methods=['GET', 'POST'])
 @login_required
 def manage_spots():
     if current_user.role != 'admin':
@@ -260,12 +328,18 @@ def manage_spots():
         # Then fetch lots/spots as usual
         lots = ParkingLot.query.all()
         selected_lot_id = request.args.get('lot_id')
-        spots = []
+        selected_status = request.args.get('status')
+        #spots = []
 
+        query = ParkingSpot.query
         if selected_lot_id:
-            spots = ParkingSpot.query.filter_by(lot_id=selected_lot_id).all()
+            query = query.filter_by(lot_id=selected_lot_id)
+        if selected_status:
+            query = query.filter_by(status=selected_status)
 
-        return render_template("admin_spots.html", lots=lots, spots=spots, selected_lot_id=selected_lot_id)
+        spots = query.all()
+
+        return render_template("admin_spots.html", lots=lots, spots=spots, selected_lot_id=selected_lot_id, selected_status=selected_status)
 
     except Exception as e:
         print("Error in manage_slots:", e)
@@ -415,9 +489,36 @@ def user_dashboard():
             print("Status:", active_booking.status)
             print("Start:", active_booking.parking_time)
             print("End:", active_booking.leaving_time)
+ 
+        # Bookings over time
+        booking_stats = db.session.query(
+        func.date(Reservation.parking_time),
+        func.count()
+        ).filter_by(user_id=user_id).group_by(func.date(Reservation.parking_time)).all()
 
-        return render_template('user_dashboard.html', user=user, reservations=reservations, active_booking=active_booking)
+        booking_dates = [str(row[0]) for row in booking_stats]
+        booking_counts = [row[1] for row in booking_stats]
 
+        # Cost per day
+        cost_stats = db.session.query(
+        func.date(Reservation.parking_time),
+        func.sum(Reservation.cost)
+        ).filter_by(user_id=user_id).group_by(func.date(Reservation.parking_time)).all()
+
+        cost_dates = [str(row[0]) for row in cost_stats]
+        daily_costs = [float(row[1]) for row in cost_stats]
+
+        # Latest booking
+        latest_booking = db.session.query(Reservation).filter_by(user_id=user_id).order_by(Reservation.parking_time.desc()).first()
+
+        return render_template('user_dashboard.html', user=user, reservations=reservations, active_booking=active_booking,
+            booking_dates=json.dumps(booking_dates),
+            booking_counts=json.dumps(booking_counts),
+            cost_dates=json.dumps(cost_dates),
+            daily_costs=json.dumps(daily_costs),
+            latest_booking=latest_booking
+        )
+        
     except Exception as e:
         print("Error in user_dashboard:", e)
         return "Internal Server Error in user_dashboard", 500
@@ -534,13 +635,81 @@ def release_slot(reservation_id):
 @login_required
 def logout():
     logout_user()
+    session.clear()
+    flash("You have been logged out.", "info")
     return redirect(url_for('login'))
+
+
+@app.route('/api/lots')
+@login_required
+def api_lots():
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    lots = ParkingLot.query.all()
+    data = [{
+        'id': lot.id,
+        'location_name': lot.location_name,
+        'address': lot.address,
+        'pin_code': lot.pin_code,
+        'price': lot.price_per_hour
+    } for lot in lots]
+
+    return jsonify({'lots': data})
+
+@app.route('/api/spots')
+@login_required
+def api_spots():
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    lot_id = request.args.get('lot_id')
+    status = request.args.get('status')
+
+    query = ParkingSpot.query
+    if lot_id:
+        query = query.filter_by(lot_id=lot_id)
+    if status:
+        query = query.filter_by(status=status)
+
+    spots = query.all()
+    data = [{
+        'id': spot.id,
+        'spot_number': spot.spot_number,
+        'status': spot.status,
+        'lot_id': spot.lot_id
+    } for spot in spots]
+
+    return jsonify({'spots': data})
+
+@app.route('/api/reservations')
+@login_required
+def api_reservations():
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    user_id = request.args.get('user_id')
+    query = Reservation.query
+    if user_id:
+        query = query.filter_by(user_id=user_id)
+
+    reservations = query.all()
+    data = [{
+        'id': res.id,
+        'user_id': res.user_id,
+        'spot_id': res.spot_id,
+        'parking_time': res.parking_time.isoformat(),
+        'leaving_time': res.leaving_time.isoformat(),
+        'status': res.status
+    } for res in reservations]
+
+    return jsonify({'reservations': data})
+
 
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
     app.run(debug=True)
-
 
 
 
