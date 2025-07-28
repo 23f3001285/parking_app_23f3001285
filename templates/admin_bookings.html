@@ -10,6 +10,7 @@
           <th>User</th>
           <th>Spot #</th>
           <th>Location</th>
+          <th>Vehicle Number</th>
           <th>Start Time</th>
           <th>Leaving Time</th>
           <th>Status</th>
@@ -22,6 +23,7 @@
           <td>{{ b.user_name }}</td>
           <td>{{ b.spot_number }}</td>
           <td>{{ b.lot_location }}</td>
+          <td>{{ b.vehicle_number }}</td>
           <td>{{ b.parking_time.strftime('%Y-%m-%d %H:%M') }}</td>
           <td>
             {% if b.leaving_time %}

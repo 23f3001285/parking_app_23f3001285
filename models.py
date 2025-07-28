@@ -20,7 +20,6 @@ class User(db.Model, UserMixin):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     reservations = db.relationship('Reservation', backref='user', lazy=True)
 
-
 class ParkingLot(db.Model):
     __tablename__ = 'parking_lots'
     id = db.Column(db.Integer, primary_key=True)
@@ -47,6 +46,7 @@ class Reservation(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     spot_id = db.Column(db.Integer, db.ForeignKey('parking_spots.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    vehicle_number = db.Column(db.String(20))
     parking_time = db.Column(db.DateTime, default=datetime.utcnow)
     leaving_time = db.Column(db.DateTime, nullable=True)
     cost = db.Column(db.Float, default=0.0)

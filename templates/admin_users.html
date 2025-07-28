@@ -30,9 +30,16 @@
             <h5 class="card-title mb-1">{{ user.full_name }}</h5>
             <p class="text-muted mb-0">{{ user.email }}</p>
           </div>
-          <form method="POST" action="{{ url_for('delete_user', user_id=user.id) }}" onsubmit="return confirm('Are you sure you want to delete {{ user.full_name }}?');">
-            <button type="submit" class="btn btn-sm btn-danger">Delete User</button>
-          </form>
+          <!-- User Delete Button -->
+          <button type="button" class="btn btn-danger"
+                  data-bs-toggle="modal"
+                  data-bs-target="#confirmDeleteModal"
+                  data-id="{{ user.id }}"
+                  data-name="{{ user.username }}"
+                  data-type="user">
+            Delete
+          </button>
+
         </div>
 
         {% set user_reservations = reservations | selectattr('user_id', 'equalto', user.id) | list %}

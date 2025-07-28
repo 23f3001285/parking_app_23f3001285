@@ -11,28 +11,68 @@
 <body>
     <!-- Navbar -->
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-    <div class="container">
-        <a class="navbar-brand" href="{{ url_for('home') }}">ParkingApp</a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="navbarNav">
-            <ul class="navbar-nav ms-auto">
-                {% if current_user.is_authenticated %}
-                    {% if current_user.role == 'admin' %}
-                        <li class="nav-item"><a class="nav-link" href="{{ url_for('admin_dashboard') }}">Admin Dashboard</a></li>
-                    {% else %}
-                        <li class="nav-item"><a class="nav-link" href="{{ url_for('user_dashboard') }}">Dashboard</a></li>
-                    {% endif %}
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('logout') }}">Logout</a></li>
-                {% else %}
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('login') }}">Login</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('register') }}">Register</a></li>
-                {% endif %}
-            </ul>
-        </div>
+  <div class="container">
+    <a class="navbar-brand" href="{{ url_for('home') }}">ParkingApp</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <div class="collapse navbar-collapse" id="navbarNav">
+      <ul class="navbar-nav ms-auto">
+        {% if current_user.is_authenticated %}
+          {% if current_user.role == 'admin' %}
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('admin_dashboard') }}">Dashboard</a>
+            </li>
+
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" href="#" id="parkingDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                Parking Lots
+              </a>
+              <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="parkingDropdown">
+                <li><a class="dropdown-item" href="{{ url_for('add_parking_lot') }}">Add New Lot</a></li>
+                <li><a class="dropdown-item" href="{{ url_for('view_parking_lots') }}">View Lots</a></li>
+              </ul>
+            </li>
+
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('manage_spots') }}">Manage Spots</a>
+            </li>
+
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('manage_users') }}">Users</a>
+            </li>
+
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('view_all_bookings') }}">Bookings</a>
+            </li>
+          {% else %}
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('user_dashboard') }}">Dashboard</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('book_slot') }}">Book Slot</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('booking_history') }}">Booking History</a>
+            </li>
+          {% endif %}
+          <li class="nav-item">
+            <a class="nav-link text-warning fw-bold" href="{{ url_for('logout') }}">Logout</a>
+          </li>
+        {% else %}
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('login') }}">Login</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('register') }}">Register</a>
+          </li>
+        {% endif %}
+      </ul>
     </div>
+  </div>
 </nav>
+
 
     <!-- Flash Messages -->
     <div class="container mt-3">
@@ -47,6 +87,49 @@
             {% endif %}
         {% endwith %}
     </div>
+
+    <!-- Confirmation Modal -->
+<div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <form method="POST" id="deleteForm">
+      <div class="modal-content">
+        <div class="modal-header bg-danger text-white">
+          <h5 class="modal-title" id="confirmDeleteLabel">Confirm Deletion</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          Are you sure you want to delete <strong id="itemName"></strong>?
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-danger">Yes, Delete</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+    <script>
+  const deleteModal = document.getElementById('confirmDeleteModal');
+  deleteModal.addEventListener('show.bs.modal', function (event) {
+    const button = event.relatedTarget;
+    const id = button.getAttribute('data-id');
+    const name = button.getAttribute('data-name');
+    const type = button.getAttribute('data-type');
+
+    const form = deleteModal.querySelector('#deleteForm');
+    const itemName = deleteModal.querySelector('#itemName');
+
+    itemName.textContent = name;
+
+    if (type === 'lot') {
+      form.action = `/admin/delete_lot/${id}`;
+    } else if (type === 'user') {
+      form.action = `/admin/users/${id}/delete`;
+    }
+  });
+</script>
+
 
     <!-- Page Content -->
     <div class="container">

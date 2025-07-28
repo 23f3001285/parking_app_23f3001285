@@ -8,6 +8,7 @@
         <tr>
           <th>Location</th>
           <th>Spot ID</th>
+          <th> Vehicle Number</th>
           <th>Start Time</th>
           <th>End Time</th>
           <th>Status</th>
@@ -19,6 +20,7 @@
         <tr>
           <td>{{ booking.spot.lot.location_name }}</td>
           <td>{{ booking.spot_id }}</td>
+          <td>{{ booking.vehicle_number }}</td>
           <td>{{ booking.parking_time.strftime('%d %b %Y %I:%M %p') }}</td>
           <td>
             {% if booking.leaving_time %}

@@ -2,33 +2,59 @@
 {% block content %}
 <div class="container mt-5">
   <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2>📍 All Parking Lots</h2>
-    <a href="{{ url_for('add_parking_lot') }}" class="btn btn-success">+ Add New Lot</a>
+    <h2> All Parking Lots</h2>
+    <a href="{{ url_for('add_parking_lot') }}" class="btn btn-warning">
+      + Add New Lot
+    </a>
   </div>
 
   {% for lot in lots %}
-  <div class="card mb-3 shadow-sm">
+  <div class="card mb-4 shadow-sm border-0 rounded-4">
     <div class="card-body">
-      <h5 class="card-title">{{ lot.location_name }}</h5>
-      <p class="card-text">
-        {{ lot.address }} ({{ lot.pin_code }})<br>
-        ₹{{ lot.price_per_hour }}/hr | Max Spots: {{ lot.max_spots }} |
-        Occupied: {{ lot.spots | selectattr('status', 'equalto', 'O') | list | length }}
+      <h5 class="card-title mb-1">{{ lot.location_name }}</h5>
+      <p class="text-muted small mb-2">{{ lot.address }} | {{ lot.pin_code }}</p>
+      <p class="mb-3">
+        ₹<strong>{{ lot.price_per_hour }}</strong> per hour |
+        Max Spots: <strong>{{ lot.max_spots }}</strong> |
+        Occupied: <strong>{{ lot.spots | selectattr('status', 'equalto', 'O') | list | length }}</strong>
       </p>
-      <div class="d-flex flex-wrap gap-2">
-        <a href="{{ url_for('edit_lot', lot_id=lot.id) }}" class="btn btn-sm btn-outline-primary">Edit</a>
-        <form action="{{ url_for('delete_lot', lot_id=lot.id) }}" method="POST" class="d-inline">
-          <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure?');">Delete</button>
+
+      <!-- Properly aligned action buttons -->
+      <div class="d-flex justify-content-end gap-2 flex-wrap">
+        <a href="{{ url_for('edit_lot', lot_id=lot.id) }}" class="btn btn-outline-dark btn-sm">
+           Edit
+        </a>
+        <button type="button" class="btn btn-danger"
+                data-bs-toggle="modal"
+                data-bs-target="#confirmDeleteModal"
+                data-id="{{ lot.id }}"
+                data-name="{{ lot.name }}"
+                data-type="lot">
+            Delete
+        </button>
+        <form action="{{ url_for('add_missing_spots', lot_id=lot.id) }}" method="POST">
+          <button type="submit" class="btn btn-outline-warning btn-sm"> Add Spots</button>
         </form>
-        <form action="{{ url_for('add_missing_spots', lot_id=lot.id) }}" method="POST" class="d-inline">
-          <button type="submit" class="btn btn-sm btn-outline-warning">Add Missing Spots</button>
+        <form method="POST" action="{{ url_for('view_parking_lots') }}">
+        <input type="hidden" name="lot_id" value="{{ lot.id }}">
+          {% if lot.status == 'Active' %}
+            <button class="btn btn-outline-secondary btn-sm" type="submit">Deactivate</button>
+          {% else %}
+            <button class="btn btn-outline-success btn-sm" type="submit">Activate</button>
+          {% endif %}
         </form>
+
       </div>
     </div>
   </div>
   {% endfor %}
 
-  <a href="{{ url_for('admin_dashboard') }}" class="btn btn-link mt-4">⬅ Back to Dashboard</a>
+  <div class="text-center mt-4">
+    <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary btn-sm">
+      ← Back to Dashboard
+    </a>
+  </div>
 </div>
 {% endblock %}
-      
+
+ 

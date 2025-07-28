@@ -7,7 +7,7 @@
     <div class="col-md-5">
       <label for="lot" class="form-label">Filter by Lot:</label>
       <select name="lot_id" id="lot" class="form-select">
-        <option value="">-- All Lots --</option>
+        <option value="">All Lots</option>
         {% for lot in lots %}
           <option value="{{ lot.id }}" {% if selected_lot_id and selected_lot_id|int == lot.id %}selected{% endif %}>{{ lot.location_name }}</option>
         {% endfor %}
@@ -16,7 +16,7 @@
     <div class="col-md-5">
       <label for="status" class="form-label">Filter by Status:</label>
       <select name="status" id="status" class="form-select">
-        <option value="">-- All Status --</option>
+        <option value="">All Status</option>
         <option value="A" {% if selected_status == 'A' %}selected{% endif %}>Available</option>
         <option value="O" {% if selected_status == 'O' %}selected{% endif %}>Occupied</option>
         <option value="U" {% if selected_status == 'U' %}selected{% endif %}>Unavailable</option>
@@ -75,6 +75,6 @@
 {% else %}
   <p>No matching parking spots found.</p>
 {% endif %}
-<a href="{{ url_for('admin_dashboard') }}">⬅ Back to Dashboard</a>
+  <a href="{{ url_for('admin_dashboard') }}" class="btn btn-outline-secondary mt-3">← Back to Dashboard</a>
 {% endblock %}
 

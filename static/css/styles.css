@@ -64,6 +64,11 @@ body {
   padding: 0.4em 0.6em;
 }
 
+.btn:hover {
+  transform: scale(1.03);
+  transition: all 0.2s ease-in-out;
+}
+
 /* Form Styling */
 form {
   background-color: white;
@@ -145,6 +150,7 @@ input::placeholder {
   padding: 0.75rem 1.5rem;
   font-size: 1.1rem;
 }
+
 
 form .form-label {
   font-weight: 600;

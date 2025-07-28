@@ -1,22 +1,22 @@
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 from pytz import timezone
 from flask import Flask, render_template, redirect, url_for, request, session, flash, jsonify
-from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, login_user, logout_user, login_required, UserMixin, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from models import db, Admin, User, ParkingLot, ParkingSpot, Reservation 
 import os
 from forms import RegistrationForm, LoginForm
 from collections import defaultdict, Counter
-from sqlalchemy import func, cast, Date, or_ 
+from sqlalchemy import func
 import json
+from flask_migrate import Migrate
 
 app = Flask(__name__, static_folder='static')
 basedir = os.path.abspath(os.path.dirname(__file__))
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'parking.db')
-#app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///instance/parking.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'instance', 'parking.db')
 app.config['SECRET_KEY'] = 'secret-key'
 db.init_app(app)
+migrate = Migrate(app, db)
 
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -212,14 +212,24 @@ def add_parking_lot():
     
     return render_template('add_parking_lot.html')
 
-@app.route('/admin/lots')
+@app.route('/admin/lots', methods=['GET', 'POST'])
 @login_required
 def view_parking_lots():
     if current_user.role != 'admin':
         return "Unauthorized", 403
 
+    if request.method == 'POST':
+        lot_id = request.form.get('lot_id')
+        lot = ParkingLot.query.get(lot_id)
+        if lot:
+            lot.status = 'Inactive' if lot.status == 'Active' else 'Active'
+            db.session.commit()
+            flash(f"Lot '{lot.location_name}' status changed to {lot.status}", 'info')
+        return redirect(url_for('view_parking_lots'))
+
     lots = ParkingLot.query.all()
     return render_template('admin_lots.html', lots=lots)
+
 
 @app.route('/admin/edit_lot/<int:lot_id>', methods=['GET', 'POST'])
 @login_required
@@ -378,7 +388,6 @@ def toggle_spot_status(spot_id):
     return redirect(url_for('manage_spots'))
 
 
-
 @app.route('/admin/users', methods = ['GET', 'POST'])
 @login_required
 def manage_users():
@@ -442,6 +451,7 @@ def view_all_bookings():
         User.full_name.label('user_name'),
         ParkingSpot.spot_number.label('spot_number'),
         ParkingLot.location_name.label('lot_location'),
+        Reservation.vehicle_number,
         Reservation.parking_time,
         Reservation.leaving_time,
         Reservation.cost,
@@ -531,9 +541,6 @@ def booking_history():
 
     user_id = int(current_user.get_id().split(':')[1])
     reservations = Reservation.query.filter_by(user_id=user_id).all()
-   # spot = ParkingSpot.query.get(reservations.spot_id)
-   # lot = ParkingLot.query.get(spot.lot_id)
-
 
     return render_template('booking_history.html', reservations=reservations)
 
@@ -544,14 +551,17 @@ def book_slot():
     if current_user.role != 'user':
         return "Unauthorized", 403
 
-    lots = ParkingLot.query.all()
-    available_spots = ParkingSpot.query.filter_by(is_available=True).all()
+    lots = ParkingLot.query.filter_by(status='Active').all()
+    active_lot_ids = [lot.id for lot in lots]
+    available_spots = ParkingSpot.query.filter(
+        ParkingSpot.is_available == True,
+        ParkingSpot.lot_id.in_(active_lot_ids)
+    ).all()
 
     if request.method == 'POST':
         spot_id = request.form.get('spot_id')
-       #lot_id = request.form.get('lot_id')
-       #spot_id = int(request.form['spot_id'])
-        lot_id = int(request.form['lot_id'])  # (optional usage)
+        vehicle_number = request.form['vehicle_number']
+        # lot_id = int(request.form['lot_id'])  
         raw_start = request.form['start_time'].strip().upper()
         raw_end = request.form['end_time'].strip().upper()
 
@@ -561,7 +571,7 @@ def book_slot():
         try:
             start_time = datetime.strptime(f"{today} {raw_start}", "%Y-%m-%d %I:%M %p")
             end_time = datetime.strptime(f"{today} {raw_end}", "%Y-%m-%d %I:%M %p")
-        except ValueError as ve:
+        except ValueError :
             flash("Invalid time format. Please use format like '10:30 AM'", "danger")
             return redirect(url_for('book_slot'))
         
@@ -572,12 +582,18 @@ def book_slot():
         spot = db.session.get(ParkingSpot, spot_id)
         lot = db.session.get(ParkingLot, spot.lot_id)
 
+        if lot.status != 'Active':
+            flash("This parking lot is currently inactive. Please select another lot.", "danger")
+            return redirect(url_for('book_slot'))
+
+
         duration_hours = (end_time - start_time).total_seconds() / 3600
         cost = round(duration_hours * lot.price_per_hour, 2) or 0.0
         
         reservation = Reservation(
             user_id=current_user.id,
             spot_id=spot_id,
+            vehicle_number=vehicle_number,
             parking_time=start_time,
             leaving_time=end_time,
             cost=cost,

@@ -1,0 +1,150 @@
+openapi: 3.0.3
+info:
+  title: Vehicle Parking App API
+  description: API documentation for the Flask-based multi-user vehicle parking management system.
+  version: 1.0.0
+servers:
+  - url: http://localhost:5000
+    description: Local development server
+
+paths:
+  /api/lots:
+    get:
+      summary: Get all parking lots (admin only)
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: A list of parking lots
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  lots:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        location_name:
+                          type: string
+                        address:
+                          type: string
+                        pin_code:
+                          type: string
+                        price:
+                          type: number
+        '403':
+          description: Unauthorized access
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+
+  /api/spots:
+    get:
+      summary: Get filtered parking spots (admin only)
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: lot_id
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [Available, Occupied]
+      responses:
+        '200':
+          description: A list of parking spots
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  spots:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        spot_number:
+                          type: string
+                        status:
+                          type: string
+                        lot_id:
+                          type: integer
+        '403':
+          description: Unauthorized access
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+
+  /api/reservations:
+    get:
+      summary: Get user reservations (admin only)
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: user_id
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: A list of reservations
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  reservations:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        user_id:
+                          type: integer
+                        spot_id:
+                          type: integer
+                        parking_time:
+                          type: string
+                          format: date-time
+                        leaving_time:
+                          type: string
+                          format: date-time
+                        status:
+                          type: string
+        '403':
+          description: Unauthorized access
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: session

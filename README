@@ -1,0 +1,157 @@
+# Vehicle Parking Management System
+
+## Overview
+
+A full-stack web application for managing 4-wheeler vehicle parking slots. It supports both **Admin** and **User** roles with secure authentication and intuitive booking functionality.
+
+---
+
+## Folder Structure
+
+PARKING_APP/
+│
+├── static/
+│   ├── css/
+│   │   └── styles.css
+│   └── js/
+│       ├── admin_charts.js
+│       └── user_charts.js
+├── templates/
+│   ├── base.html
+│   ├── login.html
+│   ├── register.html
+│   ├── user_dashboard.html
+│   ├── book_slot.html
+│   ├── booking_history.html
+│   ├── admin_dashboard.html
+│   ├── admin_users.html
+│   ├── admin_lots.html
+│   ├── admin_spots.html
+│   ├── admin_bookings.html
+│   ├── add_parking_lot.html
+│   └── edit_parking_lot.html
+├── instance/
+│   └── parking.db
+├── app.py
+├── forms.py
+├── models.py
+├── init_db.py
+└── requirements.txt
+
+
+---
+
+## Technologies Used
+
+- **Backend**: Flask, SQLAlchemy, Flask-Login
+- **Frontend**: HTML, CSS, Bootstrap, Jinja2
+- **Database**: SQLite (can be upgraded)
+- **API**: RESTful endpoints using Flask routes
+- **Others**: Jinja2 templates, Session Management
+
+---
+
+## Features Overview
+
+### User Functionalities
+- Register and login
+- View available parking lots and book the first available spot
+- Occupy or release parking spots with timestamps
+- View parking history and cost summary
+
+### Admin Functionalities
+- Predefined Admin login (no registration)
+- Create, edit, delete parking lots
+- Auto-generate parking spots
+- View all parking lots and spot status
+- View all users and their usage details
+- Access reservation and parking history
+
+---
+
+## Authentication & Roles
+
+- **Flask-Login** integrated
+- **Admin**: Predefined user with full access
+- **User**: Can register, login, and access parking services
+
+---
+
+##  Core Milestones Implemented
+
+| Milestone | Description | Status | Commit |
+|----------|-------------|--------|--------|
+| Database Models and Schema Setup | Models for User, Admin, ParkingLot, ParkingSpot, Booking | Done | `Milestone-VP DB-Relationship` |
+| Authentication and Role-Based Access | Login, Register, Role Redirection | Done | `Milestone-VP Auth-RBAC` |
+| Admin Dashboard and Lot/Spot Management | CRUD for Lots & Spots, View Users | Done | `Milestone-VP Admin-Dashboard-Management` |
+| User Dashboard and Reservation System | View, Book, Occupy, Release Spots |  Done | `Milestone-VP User-Dashboard-Management` |
+| Reservation History and Summary | View History with Timestamps | Done | `Milestone-VP Summary-Users-Admin` |
+| Slot Time & Cost Calculation | Cost based on duration & lot price | Done | `Milestone-VP Cost-Calculation` |
+
+---
+
+## API Routes for Testing (Browser/Postman)
+
+> You can test these routes manually from the browser or using Postman.
+
+### Authentication
+- `GET /login` – Login page
+- `POST /login` – Handle login
+- `GET /register` – User registration
+- `POST /register` – Handle registration
+- `GET /logout` – Logout
+
+### Admin Endpoints
+- `GET /admin/dashboard` – Admin dashboard
+- `GET /admin/create_lot` – Create parking lot
+- `POST /admin/create_lot` – Submit lot details
+- `GET /admin/view_lots` – View parking lots and spot status
+- `GET /admin/view_users` – View all users
+- `GET /admin/parking_history` – Full parking history
+
+###  User Endpoints
+- `GET /user/dashboard` – User dashboard
+- `POST /user/book/<lot_id>` – Book a spot
+- `POST /user/occupy/<spot_id>` – Occupy a booked spot
+- `POST /user/release/<spot_id>` – Release spot
+- `GET /user/history` – View parking history
+
+---
+
+##  Optional Enhancements (Planned or Partial)
+
+| Milestone | Description | Status |
+|----------|-------------|--------|
+| Search functionality (Admin) | Search user or spot | Done |
+| API Integration | RESTful endpoints | Basic API implemented |
+| Charts and Visualization | Visual parking stats | Basic |
+| Frontend and Backend Validation | HTML/JS + Flask validations |  Basic validations added |
+| Responsive UI | Mobile-first design with Bootstrap |  Done |
+| Flask Security & Session Protection | Route protection, login_required | Done |
+
+---
+
+##  Installation
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/your-username/parking-app.git
+cd parking-app
+
+# 2. Create a virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# 3. Install dependencies
+pip install -r requirements.txt
+
+# 4. Create the database
+python database/create_db.py
+
+# 5. Run the app
+python app.py
+```
+### Admin Credentials
+
+Username: admin@example.com
+Password: admin123
